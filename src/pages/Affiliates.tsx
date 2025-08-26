@@ -1,63 +1,35 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
-import AffiliateCard from "../components/AffiliateCard";
-import { useTranslation } from "react-i18next";
+import type { Affiliate } from "../types"; // Adjust path if types.ts is elsewhere
 
-interface Affiliate {
-  _id: string;
-  name: string;
-  location?: string;
-  cause?: string;
+interface AffiliateCardProps {
+  affiliate: Affiliate;
 }
 
-function Affiliates() {
-  const { t } = useTranslation();
-  const [affiliates, setAffiliates] = useState<Affiliate[]>([]);
-  const [filters, setFilters] = useState({ location: "", cause: "" });
-
-  useEffect(() => {
-    const fetchAffiliates = async () => {
-      try {
-        const response = await axios.get(
-          "http://localhost:5000/api/affiliates",
-          {
-            params: filters,
-          }
-        );
-        setAffiliates(response.data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    fetchAffiliates();
-  }, [filters]);
-
+function AffiliateCard({ affiliate }: AffiliateCardProps) {
   return (
-    <div className="container mx-auto py-8">
-      <h2 className="text-3xl font-bold mb-4">{t("affiliates")}</h2>
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder={t("filterByLocation")}
-          value={filters.location}
-          onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-          className="p-2 border mr-2"
-        />
-        <input
-          type="text"
-          placeholder={t("filterByCause")}
-          value={filters.cause}
-          onChange={(e) => setFilters({ ...filters, cause: e.target.value })}
-          className="p-2 border"
-        />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {affiliates.map((affiliate) => (
-          <AffiliateCard key={affiliate._id} affiliate={affiliate} />
-        ))}
-      </div>
+    <div className="border rounded p-4 shadow-md">
+      <img
+        src={affiliate.images?.[0] || "/assets/refugee1.jpg"}
+        alt={affiliate.name}
+        className="w-full h-48 object-cover mb-4"
+      />
+      <h3 className="text-xl font-bold">{affiliate.name}</h3>
+      <p className="text-gray-600">
+        {affiliate.description || "No description available"}
+      </p>
+      <p className="text-sm text-gray-500">
+        Location: {affiliate.location || "Not specified"}
+      </p>
+      <p className="text-sm text-gray-500">
+        Cause: {affiliate.cause || "Not specified"}
+      </p>
+      <a
+        href="/donate"
+        className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded"
+      >
+        Support
+      </a>
     </div>
   );
 }
 
-export default Affiliates;
+export default AffiliateCard;
