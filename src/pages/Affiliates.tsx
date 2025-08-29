@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import AffiliateCard from "../components/AffiliateCard";
 import { useTranslation } from "react-i18next";
-import type { Affiliate } from "../types"; // Adjust path if types.ts is elsewhere
+import type { Affiliate } from "../types";
 
 function Affiliates() {
   const { t } = useTranslation();
@@ -13,7 +13,7 @@ function Affiliates() {
     const fetchAffiliates = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:5000/api/affiliates",
+          `${import.meta.env.VITE_API_URL}/api/affiliates`,
           {
             params: filters,
           }

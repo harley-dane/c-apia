@@ -18,12 +18,14 @@ function Gallery() {
   useEffect(() => {
     const fetchImages = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/gallery");
-        console.log("Gallery API response:", response.data); // Debug
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/gallery`
+        );
+        console.log("Gallery API response:", response.data);
         setImages(response.data);
         setLoading(false);
       } catch (_) {
-        console.error("Failed to fetch gallery images:", _); // Debug
+        console.error("Failed to fetch gallery images:", _);
         setError(t("galleryFetchError"));
         setLoading(false);
       }
@@ -49,14 +51,16 @@ function Gallery() {
           {images.map((img) => (
             <div key={img._id} className="relative">
               <img
-                src={`http://localhost:5000${img.path}`}
+                src={`${import.meta.env.VITE_API_URL}${img.path}`}
                 alt={img.alt}
                 className="w-full h-48 object-cover rounded-md shadow-md hover:shadow-lg transition-shadow duration-300"
                 onError={() =>
                   console.error(
-                    `Failed to load image: http://localhost:5000${img.path}`
+                    `Failed to load image: ${import.meta.env.VITE_API_URL}${
+                      img.path
+                    }`
                   )
-                } // Debug
+                }
               />
               <p className="text-center mt-2">{img.description}</p>
             </div>

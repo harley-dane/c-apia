@@ -50,7 +50,7 @@ function BlogPost({ post, user }: BlogPostProps) {
     }
     try {
       const response = await axios.post(
-        `http://localhost:5000/api/blogs/${post._id}/comments`,
+        `${import.meta.env.VITE_API_URL}/api/blogs/${post._id}/comments`,
         { text: newComment },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
@@ -69,7 +69,7 @@ function BlogPost({ post, user }: BlogPostProps) {
     }
     try {
       await axios.post(
-        `http://localhost:5000/api/blogs/${post._id}/like`,
+        `${import.meta.env.VITE_API_URL}/api/blogs/${post._id}/like`,
         {},
         { headers: { Authorization: `Bearer ${user.token}` } }
       );

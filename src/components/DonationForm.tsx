@@ -55,7 +55,7 @@ function DonationForm() {
         : amount;
       console.log("Final amount sent to backend:", finalAmount);
       const response = await axios.post(
-        "http://localhost:5000/api/donations/stripe",
+        `${import.meta.env.VITE_API_URL}/api/donations/stripe`,
         { amount: finalAmount },
         { headers: { "Content-Type": "application/json" } }
       );
@@ -78,7 +78,7 @@ function DonationForm() {
         return;
       }
 
-      await axios.post("http://localhost:5000/api/donations", {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/donations`, {
         ...data,
         amount: finalAmount,
         paymentMethod: "stripe",
