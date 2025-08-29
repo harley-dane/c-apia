@@ -1,65 +1,70 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { PaystackButton } from "react-paystack";
-import axios from "axios";
 import { useTranslation } from "react-i18next";
+import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import axios from "axios";
 
-// Define TypeScript interface for form data
 interface DonationFormData {
   amount: string;
-  email: string;
+  donorEmail: string;
   project: string;
+  paymentMethod: "stripe" | "paystack";
+  coverFee: boolean;
 }
 
 function DonationForm() {
   const { t } = useTranslation();
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<DonationFormData>();
   const stripe = useStripe();
   const elements = useElements();
-  const [paymentMethod, setPaymentMethod] = useState<"stripe" | "paystack">(
-    "stripe"
-  );
-  const [coverFee, setCoverFee] = useState(false);
-  const [amount, setAmount] = useState<number>(0);
-  const [email, setEmail] = useState<string>("");
+  const [formData, setFormData] = useState<DonationFormData>({
+    amount: "",
+    donorEmail: "",
+    project: "",
+    paymentMethod: "stripe",
+    coverFee: false,
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const onSubmit = async (data: DonationFormData) => {
-    const finalAmount = coverFee
-      ? parseFloat(data.amount) * 1.03
-      : parseFloat(data.amount);
-    try {
-      await axios.post("http://localhost:5000/api/donations", {
-        amount: finalAmount,
-        donorEmail: data.email,
-        project: data.project,
-        paymentMethod,
-        feeCovered: coverFee,
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      setFormData({
+        ...formData,
+        [name]: (e.target as HTMLInputElement).checked,
       });
-      alert(t("donationSuccess"));
-    } catch (error) {
-      console.error("Donation error:", error);
-      alert(t("donationFailed"));
+    } else {
+      setFormData({ ...formData, [name]: value });
     }
   };
 
   const handleStripePayment = async (data: DonationFormData) => {
-    const finalAmount = coverFee
-      ? parseFloat(data.amount) * 1.03
-      : parseFloat(data.amount);
+    setLoading(true);
+    setError(null);
     try {
+      const amount = parseFloat(data.amount);
+      console.log("Attempting Stripe payment with amount:", amount);
+      if (isNaN(amount) || amount < 0.5) {
+        setError(t("invalidAmount"));
+        setLoading(false);
+        return;
+      }
+      const finalAmount = data.coverFee
+        ? Math.round(amount * 1.03 * 100) / 100
+        : amount;
+      console.log("Final amount sent to backend:", finalAmount);
       const response = await axios.post(
         "http://localhost:5000/api/donations/stripe",
-        { amount: finalAmount }
+        { amount: finalAmount },
+        { headers: { "Content-Type": "application/json" } }
       );
+      console.log("Server response:", response.data);
       const { clientSecret } = response.data;
 
       if (!stripe || !elements) {
-        alert(t("stripeNotLoaded"));
+        setError(t("stripeNotLoaded"));
+        setLoading(false);
         return;
       }
 
@@ -68,135 +73,134 @@ function DonationForm() {
       });
 
       if (result.error) {
-        alert(result.error.message);
-      } else {
-        await onSubmit(data);
+        setError(result.error.message || t("donationFailed"));
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error("Stripe payment error:", error);
-      alert(t("donationFailed"));
+
+      await axios.post("http://localhost:5000/api/donations", {
+        ...data,
+        amount: finalAmount,
+        paymentMethod: "stripe",
+      });
+      alert(t("donationSuccess"));
+      setFormData({
+        amount: "",
+        donorEmail: "",
+        project: "",
+        paymentMethod: "stripe",
+        coverFee: false,
+      });
+    } catch (error: unknown) {
+      console.error("Stripe payment error details:", error);
+      setError(
+        (error instanceof Error ? error.message : "Unknown error") ||
+          t("donationFailed")
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData.paymentMethod === "stripe") {
+      handleStripePayment(formData);
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(
-        paymentMethod === "stripe" ? handleStripePayment : onSubmit
-      )}
-      className="max-w-lg mx-auto p-4"
-    >
+    <form onSubmit={handleSubmit} className="max-w-lg mx-auto">
       <div className="mb-4">
-        <label htmlFor="amount" className="block mb-2">
+        <label htmlFor="amount" className="block text-sm font-medium">
           {t("amount")}
         </label>
         <input
           type="number"
           id="amount"
-          {...register("amount", {
-            required: t("amountRequired"),
-            min: { value: 1, message: t("amountMin") },
-          })}
-          onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-          className="w-full p-2 border"
-          aria-describedby={errors.amount ? "amount-error" : undefined}
+          name="amount"
+          value={formData.amount}
+          onChange={handleInputChange}
+          className="mt-1 block w-full border rounded p-2"
+          required
+          min="0.5"
+          step="0.01"
         />
-        {errors.amount && (
-          <p id="amount-error" className="text-red-600 text-sm">
-            {errors.amount.message}
-          </p>
-        )}
       </div>
       <div className="mb-4">
-        <label htmlFor="email" className="block mb-2">
+        <label htmlFor="donorEmail" className="block text-sm font-medium">
           {t("email")}
         </label>
         <input
           type="email"
-          id="email"
-          {...register("email", { required: t("emailRequired") })}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full p-2 border"
-          aria-describedby={errors.email ? "email-error" : undefined}
+          id="donorEmail"
+          name="donorEmail"
+          value={formData.donorEmail}
+          onChange={handleInputChange}
+          className="mt-1 block w-full border rounded p-2"
+          required
         />
-        {errors.email && (
-          <p id="email-error" className="text-red-600 text-sm">
-            {errors.email.message}
-          </p>
-        )}
       </div>
       <div className="mb-4">
-        <label htmlFor="project" className="block mb-2">
+        <label htmlFor="project" className="block text-sm font-medium">
           {t("project")}
         </label>
         <select
           id="project"
-          {...register("project", { required: t("projectRequired") })}
-          className="w-full p-2 border"
-          aria-describedby={errors.project ? "project-error" : undefined}
+          name="project"
+          value={formData.project}
+          onChange={handleInputChange}
+          className="mt-1 block w-full border rounded p-2"
+          required
         >
           <option value="">{t("selectProject")}</option>
-          <option value="forestation">{t("forestation")}</option>
-          <option value="refugee">{t("refugeeSupport")}</option>
+          <option value="conservation">{t("conservation")}</option>
+          <option value="education">{t("education")}</option>
+          <option value="community">{t("community")}</option>
         </select>
-        {errors.project && (
-          <p id="project-error" className="text-red-600 text-sm">
-            {errors.project.message}
-          </p>
-        )}
       </div>
       <div className="mb-4">
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            onChange={(e) => setCoverFee(e.target.checked)}
-            className="mr-2"
-          />
-          {t("coverFee")}
-        </label>
-      </div>
-      <div className="mb-4">
-        <label htmlFor="paymentMethod" className="block mb-2">
+        <label htmlFor="paymentMethod" className="block text-sm font-medium">
           {t("paymentMethod")}
         </label>
         <select
           id="paymentMethod"
-          onChange={(e) =>
-            setPaymentMethod(e.target.value as "stripe" | "paystack")
-          }
-          className="w-full p-2 border"
+          name="paymentMethod"
+          value={formData.paymentMethod}
+          onChange={handleInputChange}
+          className="mt-1 block w-full border rounded p-2"
         >
-          <option value="stripe">Credit Card (Stripe)</option>
+          <option value="stripe">Stripe</option>
           <option value="paystack">Paystack</option>
         </select>
       </div>
-      {paymentMethod === "stripe" && (
+      <div className="mb-4">
+        <label className="inline-flex items-center">
+          <input
+            type="checkbox"
+            name="coverFee"
+            checked={formData.coverFee}
+            onChange={handleInputChange}
+            className="form-checkbox"
+          />
+          <span className="ml-2">{t("coverFee")}</span>
+        </label>
+      </div>
+      {formData.paymentMethod === "stripe" && (
         <div className="mb-4">
-          <label className="block mb-2">{t("cardDetails")}</label>
-          <CardElement className="p-2 border" />
+          <label className="block text-sm font-medium">
+            {t("cardDetails")}
+          </label>
+          <CardElement className="mt-1 block w-full border rounded p-2" />
         </div>
       )}
-      {paymentMethod === "paystack" && (
-        <PaystackButton
-          email={email || "donor@example.com"}
-          amount={(coverFee ? amount * 1.03 : amount) * 100} // Paystack uses kobo
-          publicKey="your-paystack-public-key" // Replace with your Paystack public key
-          text={t("donateWithPaystack")}
-          onSuccess={() =>
-            onSubmit({
-              amount: amount.toString(),
-              email,
-              project: "forestation",
-            })
-          }
-          onClose={() => alert(t("paymentCancelled"))}
-          className="px-6 py-2 bg-blue-600 text-white rounded"
-        />
-      )}
+      {error && <div className="mb-4 text-red-500">{error}</div>}
       <button
         type="submit"
-        className="px-6 py-2 bg-blue-600 text-white rounded"
+        disabled={loading || !stripe || !elements}
+        className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
       >
-        {t("donate")}
+        {loading ? t("processing") : t("donate")}
       </button>
     </form>
   );

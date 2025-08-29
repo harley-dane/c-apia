@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import cpia from "../assets/cpia.png";
 
-// Define the User type for TypeScript
 interface User {
   id: string;
   email: string;
@@ -16,7 +15,6 @@ function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAboutDropdownOpen, setIsAboutDropdownOpen] = useState(false);
 
-  // Safely parse user from localStorage
   let user: User | null = null;
   try {
     const storedUser = localStorage.getItem("user");
@@ -43,17 +41,18 @@ function Header() {
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
-    setIsAboutDropdownOpen(false); // Close dropdown when toggling mobile menu
+    setIsAboutDropdownOpen(false);
+    console.log("Mobile menu aria-expanded set to:", !isMenuOpen); // Debug log
   };
 
   const toggleAboutDropdown = () => {
     setIsAboutDropdownOpen(!isAboutDropdownOpen);
+    console.log("About dropdown aria-expanded set to:", !isAboutDropdownOpen); // Debug log
   };
 
   return (
     <header className="bg-blue-600 text-white sticky top-0 z-50 shadow-md">
       <nav className="container mx-auto flex items-center justify-between p-4">
-        {/* Logo */}
         <Link to="/" className="flex items-center">
           <img
             src={cpia}
@@ -65,11 +64,14 @@ function Header() {
           </span>
         </Link>
 
-        {/* Hamburger Menu Button (Mobile) */}
         <button
+          type="button"
           className="sm:hidden focus:outline-none"
           onClick={toggleMenu}
           aria-label={t("toggleMenu")}
+          aria-expanded={isMenuOpen} // Should render as "true" or "false"
+          aria-controls="mobile-menu"
+          role="button"
         >
           <svg
             className="w-6 h-6"
@@ -89,8 +91,8 @@ function Header() {
           </svg>
         </button>
 
-        {/* Navigation Links */}
         <ul
+          id="mobile-menu"
           className={`${
             isMenuOpen ? "block" : "hidden"
           } sm:flex flex-col sm:flex-row sm:space-x-6 absolute sm:static top-16 left-0 w-full sm:w-auto bg-blue-600 sm:bg-transparent p-4 sm:p-0 transition-all duration-300 ease-in-out`}
@@ -106,10 +108,14 @@ function Header() {
           </li>
           <li className="mb-2 sm:mb-0 relative">
             <button
+              type="button"
               onClick={toggleAboutDropdown}
               className="hover:text-blue-200 transition-colors duration-200 flex items-center"
-              aria-expanded={isAboutDropdownOpen}
+              aria-label={t("toggleAboutMenu")}
+              aria-expanded={isAboutDropdownOpen} // Should render as "true" or "false"
               aria-haspopup="true"
+              aria-controls="about-dropdown"
+              role="button"
             >
               {t("about")}
               <svg
@@ -128,6 +134,7 @@ function Header() {
               </svg>
             </button>
             <ul
+              id="about-dropdown"
               className={`${
                 isAboutDropdownOpen ? "block" : "hidden"
               } sm:absolute sm:bg-blue-600 sm:shadow-lg sm:rounded-md sm:mt-2 sm:w-48 flex flex-col sm:p-2`}
@@ -172,6 +179,15 @@ function Header() {
           </li>
           <li className="mb-2 sm:mb-0">
             <Link
+              to="/gallery"
+              className="hover:text-blue-200 transition-colors duration-200"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              {t("gallery")}
+            </Link>
+          </li>
+          <li className="mb-2 sm:mb-0">
+            <Link
               to="/donate"
               className="hover:text-blue-200 transition-colors duration-200"
               onClick={() => setIsMenuOpen(false)}
@@ -191,8 +207,10 @@ function Header() {
           {user ? (
             <li className="mb-2 sm:mb-0">
               <button
+                type="button"
                 onClick={handleLogout}
                 className="hover:text-blue-200 transition-colors duration-200"
+                role="button"
               >
                 {t("logout")}
               </button>
@@ -221,39 +239,45 @@ function Header() {
           )}
         </ul>
 
-        {/* Language Switcher (Desktop) */}
         <div className="hidden sm:flex space-x-2">
           <button
+            type="button"
             onClick={() => changeLanguage("en")}
             className="px-2 py-1 rounded hover:bg-blue-700 transition-colors duration-200"
             aria-label={t("switchToEnglish")}
+            role="button"
           >
             EN
           </button>
           <button
+            type="button"
             onClick={() => changeLanguage("es")}
             className="px-2 py-1 rounded hover:bg-blue-700 transition-colors duration-200"
             aria-label={t("switchToSpanish")}
+            role="button"
           >
             ES
           </button>
         </div>
       </nav>
 
-      {/* Mobile Language Switcher */}
       {isMenuOpen && (
         <div className="sm:hidden bg-blue-600 p-4">
           <button
+            type="button"
             onClick={() => changeLanguage("en")}
             className="block w-full text-left py-2 hover:text-blue-200 transition-colors duration-200"
             aria-label={t("switchToEnglish")}
+            role="button"
           >
             {t("english")}
           </button>
           <button
+            type="button"
             onClick={() => changeLanguage("es")}
             className="block w-full text-left py-2 hover:text-blue-200 transition-colors duration-200"
             aria-label={t("switchToSpanish")}
+            role="button"
           >
             {t("spanish")}
           </button>
